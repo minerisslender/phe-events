@@ -7,14 +7,18 @@ if ( engine.ActiveGamemode() != "prop_hunt" ) then print( "[PH:E Events] Error> 
 -- Print this to signify we have passed PH check
 print( "[PH:E Events] Success> Prop Hunt is active." )
 
--- Create this ConVar to determine if we want events enabled or not
+-- Create a ConVar to allow the option to disable the script
 local ph_events_enabled = CreateConVar( "ph_events_enabled", "1", { FCVAR_NOTIFY, FCVAR_ARCHIVE }, "Enable PH:E Events." )
 
 -- Stop if ConVar is false
-if ( !ph_events_enabled:GetBool() ) then print( "[PH:E Events] Stopped> ph_events_enabled is false." ) return end
+if ( !ph_events_enabled:GetBool() ) then print( "[PH:E Events] Stopped> ph_events_enabled is FALSE." ) return end
+
+-- Create extra ConVars here
+local ph_events_lottery_always_win = CreateConVar( "ph_events_lottery_always_win", "0", { FCVAR_NOTIFY, FCVAR_ARCHIVE }, "Force PH:E Events lottery to win. Always." )
+local ph_events_force_every_round = CreateConVar( "ph_events_force_every_round", "0", { FCVAR_NOTIFY, FCVAR_ARCHIVE }, "Force PH:E Events to happen every round." )
 
 -- Let us do lottery and see if we should enable the event or not
-if ( math.random( 1, 10 ) > 2 ) then print( "[PH:E Events] Stopped> Lost lottery." ) return end
+if ( !ph_events_lottery_always_win:GetBool() && ( math.random( 1, 10 ) > 2 ) ) then print( "[PH:E Events] Stopped> Lost lottery." ) return end
 
 -- Print this to signify we won lottery
 print( "[PH:E Events] Started> Won lottery." )
@@ -77,7 +81,7 @@ function PHEEVENTS_PlayerSpawn( ply )
 			
 				ply:RemoveAllItems()
 				ply:Give( "weapon_crowbar" )
-				ply:SetRunSpeed( 300 )
+				ply:SetRunSpeed( 320 )
 			
 			end
 		
@@ -111,7 +115,7 @@ function PHEEVENTS_PlayerSpawn( ply )
 			if ( IsValid( ply ) && ( ply:Team() == TEAM_HUNTERS ) ) then
 			
 				ply:RemoveAllItems()
-				ply:SetRunSpeed( 400 )
+				ply:SetRunSpeed( 320 )
 			
 			end
 		
@@ -129,7 +133,7 @@ function PHEEVENTS_PlayerSpawn( ply )
 			
 				ply:RemoveAllItems()
 				ply:Give( "weapon_crowbar" )
-				ply:SetRunSpeed( 400 )
+				ply:SetRunSpeed( 500 )
 			
 			end
 		
@@ -207,6 +211,7 @@ function PHEEVENTS_DetermineEvent()
 
 	PHEEVENTS_INT_EventID = math.random( 1, 4 )
 	if ( PHE.HUNTER_BLINDLOCK_TIME ) then PHE.HUNTER_BLINDLOCK_TIME = 0 BroadcastLua( "PHE.HUNTER_BLINDLOCK_TIME = "..PHE.HUNTER_BLINDLOCK_TIME ) end
+	if ( PHE.WAIT_FOR_PLY ) then PHE.WAIT_FOR_PLY = false BroadcastLua( "PHE.WAIT_FOR_PLY = "..tostring( PHE.WAIT_FOR_PLY ) ) end
 
 	-- Event choosing
 	if ( PHEEVENTS_INT_EventID == 1 ) then
@@ -238,8 +243,8 @@ function PHEEVENTS_DetermineEvent()
 		PHEEVENTS_SetMusic( "music/hl2_song14.mp3" )
 	
 		PHEEVENTS_BOOLEAN_EventRound = true
-		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" Hit the dolls to earn points!\" )" )
-		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" You have 90 seconds.\" )" )
+		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" Doll Hunt! Hit the dolls to earn points!\" )" )
+		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" This event lasts 90 seconds.\" )" )
 	
 	elseif ( PHEEVENTS_INT_EventID == 2 ) then
 	
@@ -253,16 +258,16 @@ function PHEEVENTS_DetermineEvent()
 		end
 	
 		timer.Simple( 0.1, function() GAMEMODE:SetInRound( false ) end )
-		timer.Simple( 0.1, function() timer.Adjust( "RoundEndTimer", 60, 0, function() PHEEVENTS_EndEvent() end ) end )
-		timer.Simple( 0.1, function() SetGlobalFloat( "RoundEndTime", CurTime() + 60 ) end )
+		timer.Simple( 0.1, function() timer.Adjust( "RoundEndTimer", 61, 0, function() PHEEVENTS_EndEvent() end ) end )
+		timer.Simple( 0.1, function() SetGlobalFloat( "RoundEndTime", CurTime() + 61 ) end )
 	
 		PHEEVENTS_SetMusic( "music/hl2_song31.mp3" )
 	
 		PHEEVENTS_BOOLEAN_EventRound = true
-		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" It's hot props!\" )" )
-		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" You have 60 seconds.\" )" )
+		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" It's hot props! You must turn into the specified prop within the given time.\" )" )
+		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" This event lasts 60 seconds.\" )" )
 	
-		timer.Create( "PHEEVENTS_HotPropChecker", 1, 0, function() PHEEVENTS_HotPropsCheck() end )
+		timer.Create( "PHEEVENTS_HotPropChecker", 0.5, 0, function() PHEEVENTS_HotPropsCheck() end )
 	
 	elseif ( PHEEVENTS_INT_EventID == 3 ) then
 	
@@ -290,19 +295,21 @@ function PHEEVENTS_DetermineEvent()
 	
 		PHEEVENTS_BOOLEAN_EventRound = true
 		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" Dr. Kleiner has gone missing, find him!\" )" )
-		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" You have 30 seconds.\" )" )
+		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" This event lasts 30 seconds.\" )" )
 	
 	elseif ( PHEEVENTS_INT_EventID == 4 ) then
 	
 		-- Crowbar frenzy
-		timer.Simple( 0.1, function() timer.Adjust( "RoundEndTimer", 60, 0, function() PHEEVENTS_EndEvent() end ) end )
-		timer.Simple( 0.1, function() SetGlobalFloat( "RoundEndTime", CurTime() + 60 ) end )
+		if ( PHE.HUNTER_BLINDLOCK_TIME ) then PHE.HUNTER_BLINDLOCK_TIME = 10 BroadcastLua( "PHE.HUNTER_BLINDLOCK_TIME = "..PHE.HUNTER_BLINDLOCK_TIME ) end
+	
+		timer.Simple( 0.1, function() timer.Adjust( "RoundEndTimer", 40, 0, function() PHEEVENTS_EndEvent() end ) end )
+		timer.Simple( 0.1, function() SetGlobalFloat( "RoundEndTime", CurTime() + 40 ) end )
 	
 		PHEEVENTS_SetMusic( "music/hl2_song29.mp3" )
 	
 		PHEEVENTS_BOOLEAN_EventRound = true
-		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" Seems like the Hunters forgot their weapons at home.\" )" )
-		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" You have 60 seconds.\" )" )
+		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" Oh my goodness! The Hunters are on a crowbar frenzy! Props, run!\" )" )
+		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" This event lasts 40 seconds.\" )" )
 	
 	end
 
@@ -353,7 +360,7 @@ function PHEEVENTS_HotPropsCheck()
 	
 		if ( ent:GetModel() == PHEEVENTS_STRING_HotProps_Model ) then
 		
-			sound.Play( "taunts/props/32.mp3", ent:GetPos(), 120, 100, 1 )
+			ent:EmitSound( "taunts/props/32.mp3", 90, 100, 0.5, CHAN_STATIC )
 			ent:SetColor( Color( 0, 255, 0, 255 ) )
 			timer.Simple( 12, function() if ( IsValid( ent ) ) then ent:SetColor( Color( 255, 255, 255, 255 ) ) end end )
 		
@@ -376,8 +383,9 @@ function PHEEVENTS_EndEvent()
 	PHEEVENTS_BOOLEAN_EventRound = false
 	PHEEVENTS_INT_EventID = 0
 
-	-- Reset blindlock
-	if ( PHE.HUNTER_BLINDLOCK_TIME && GetConVar( "ph_hunter_blindlock_time" ) ) then PHE.HUNTER_BLINDLOCK_TIME = GetConVar( "ph_hunter_blindlock_time" ):GetFloat() BroadcastLua( "PHE.HUNTER_BLINDLOCK_TIME = "..PHE.HUNTER_BLINDLOCK_TIME ) end
+	-- Reset PHE variables
+	if ( GetConVar( "ph_hunter_blindlock_time" ) ) then PHE.HUNTER_BLINDLOCK_TIME = GetConVar( "ph_hunter_blindlock_time" ):GetFloat() BroadcastLua( "PHE.HUNTER_BLINDLOCK_TIME = "..PHE.HUNTER_BLINDLOCK_TIME ) end
+	if ( GetConVar( "ph_waitforplayers" ) ) then PHE.WAIT_FOR_PLY = GetConVar( "ph_waitforplayers" ):GetBool() BroadcastLua( "PHE.WAIT_FOR_PLY = "..tostring( PHE.WAIT_FOR_PLY ) ) end
 
 	-- Reset props
 	for _, ply in pairs( PHEEVENTS_TABLE_TeamPropsPlayers ) do
@@ -420,12 +428,7 @@ function PHEEVENTS_EndEvent()
 	
 		if ( ply:Alive() ) then
 		
-			if ( ply:Team() == TEAM_PROPS ) then
-			
-				ply:RemoveProp()
-				ply:RemoveClientProp()
-			
-			end
+			if ( ply.ph_prop ) then ply:RemoveProp() end
 			ply:KillSilent()
 		
 		end
@@ -447,7 +450,7 @@ function PHEEVENTS_OnPreRoundStart()
 	
 	end
 
-	if ( ( #ents.FindByClass( "prop_physics*" ) >= 32 ) && !PHEEVENTS_BOOLEAN_EventAboutToStart && ( GetGlobalInt( "RoundNumber" ) == PHEEVENTS_INT_EventRound ) ) then
+	if ( ( #ents.FindByClass( "prop_physics*" ) >= 32 ) && !PHEEVENTS_BOOLEAN_EventAboutToStart && ( ph_events_force_every_round:GetBool() || ( GetGlobalInt( "RoundNumber" ) == PHEEVENTS_INT_EventRound ) ) ) then
 	
 		PHEEVENTS_BOOLEAN_EventAboutToStart = true
 		BroadcastLua( "chat.AddText( Color( 255, 215, 0 ), \"[Events]\", Color( 255, 255, 255 ), \" An event is starting after this round.\" )" )
@@ -495,8 +498,9 @@ function PHEEVENTS_RoundEnd()
 		PHEEVENTS_BOOLEAN_EventRound = false
 		PHEEVENTS_INT_EventID = 0
 	
-		-- Reset blindlock
-		if ( PHE.HUNTER_BLINDLOCK_TIME && GetConVar( "ph_hunter_blindlock_time" ) ) then PHE.HUNTER_BLINDLOCK_TIME = GetConVar( "ph_hunter_blindlock_time" ):GetFloat() BroadcastLua( "PHE.HUNTER_BLINDLOCK_TIME = "..PHE.HUNTER_BLINDLOCK_TIME ) end
+		-- Reset PHE variables
+		if ( GetConVar( "ph_hunter_blindlock_time" ) ) then PHE.HUNTER_BLINDLOCK_TIME = GetConVar( "ph_hunter_blindlock_time" ):GetFloat() BroadcastLua( "PHE.HUNTER_BLINDLOCK_TIME = "..PHE.HUNTER_BLINDLOCK_TIME ) end
+		if ( GetConVar( "ph_waitforplayers" ) ) then PHE.WAIT_FOR_PLY = GetConVar( "ph_waitforplayers" ):GetBool() BroadcastLua( "PHE.WAIT_FOR_PLY = "..tostring( PHE.WAIT_FOR_PLY ) ) end
 	
 		if ( PHEEVENTS_CSOUNDPATCH_Music ) then PHEEVENTS_CSOUNDPATCH_Music:Stop() end
 	

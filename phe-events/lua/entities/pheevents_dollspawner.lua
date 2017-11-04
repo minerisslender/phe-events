@@ -15,7 +15,7 @@ function ENT:Think()
 	-- Check if our doll is valid or not
 	if ( !self.SpawnDollSpawning && !IsValid( self.SpawnDollEntity ) ) then
 	
-		self.SpawnDollTime = CurTime() + 9
+		self.SpawnDollTime = CurTime() + 14
 		self.SpawnDollSpawning = true
 	
 	end
